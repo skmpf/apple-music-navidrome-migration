@@ -809,18 +809,29 @@ def main():
         print(f"Error: Navidrome database not found: {db_path}")
         return 1
     
-    if not args.user_id:
-        print("Error: User ID required. Use -u USER_ID or --list-users to find your user ID")
-        return 1
-    
+    user_id = args.user_id
+    if not user_id:
+        users = find_user_id(db_path)
+        if len(users) == 1:
+            user_id = users[0][0]
+            print(f"Auto-detected user: {users[0][1]} ({users[0][2]})")
+        elif len(users) == 0:
+            print("Error: No users found in database")
+            return 1
+        else:
+            print("Multiple users found. Specify one with -u USER_ID:")
+            for uid, name, username in users:
+                print(f"  {uid}  {name} ({username})")
+            return 1
+
     print("="*50)
     print("iTunes to Navidrome Migration")
     print("="*50 + "\n")
-    
+
     migrator = ITunesToNavidromeMigrator(
         library_path=library_path,
         db_path=db_path,
-        user_id=args.user_id,
+        user_id=user_id,
         music_prefix=args.music_prefix,
         verbose=args.verbose,
         migrate_playlists=not args.skip_playlists,
