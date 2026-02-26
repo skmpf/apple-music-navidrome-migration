@@ -189,10 +189,10 @@ After scanning, some albums may appear multiple times in Navidrome with differen
 
 Navidrome groups tracks using MusicBrainz album ID → album artist → album name + release date. Any inconsistency across tracks on the same album causes a split:
 
-| Cause                       | Description                                                                                    |
-| --------------------------- | ---------------------------------------------------------------------------------------------- |
-| Inconsistent `release_date` | Most common. Some tracks have a year tagged, others don't. Compilations often tag each track with the original song year. |
-| Different MusicBrainz IDs   | Some tracks have a MBZ ID, others don't — or they reference different editions.                |
+| Cause                       | Description                                                                                                                                                                                     |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Inconsistent `release_date` | Most common. Some tracks have a year tagged, others don't. Compilations often tag each track with the original song year.                                                                       |
+| Different MusicBrainz IDs   | Some tracks have a MBZ ID, others don't — or they reference different editions.                                                                                                                 |
 | Inconsistent album name     | Typos, capitalisation, extra spaces, or different separator characters (`Artist - Album` vs `Artist: Album`). The script does not detect name-format differences — these need a manual tag fix. |
 
 ### Requirements
@@ -217,12 +217,12 @@ Restart Navidrome and run a full rescan, then repeat until the dry run reports 0
 
 ### What the script does
 
-| Cause                                              | Fix                                                                |
-| -------------------------------------------------- | ------------------------------------------------------------------ |
-| Some tracks missing `release_date`, others have it | Fill in the missing date from tracks that have it                  |
-| All tracks have different `release_date` values    | Clear all dates so Navidrome groups by name only                   |
-| One MBZ ID on some tracks, absent on others        | Strip the MBZ ID from tagged tracks (`--fix-mbz` required)         |
-| Two different MBZ IDs                              | Flagged for manual review — see below                              |
+| Cause                                              | Fix                                                        |
+| -------------------------------------------------- | ---------------------------------------------------------- |
+| Some tracks missing `release_date`, others have it | Fill in the missing date from tracks that have it          |
+| All tracks have different `release_date` values    | Clear all dates so Navidrome groups by name only           |
+| One MBZ ID on some tracks, absent on others        | Strip the MBZ ID from tagged tracks (`--fix-mbz` required) |
+| Two different MBZ IDs                              | Flagged for manual review — see below                      |
 
 > **MP3 note:** Navidrome uses the `TDRL` (Release Date) ID3 tag for album grouping, not `TDRC` (Recording Date). `fix_splits.py` writes the correct tag.
 
@@ -240,8 +240,8 @@ Tested on a personal library of 3,809 tracks:
 
 **migrate.py**
 
-| Metric                   | Result    |
-| ------------------------ | --------- |
+| Metric                   | Result            |
+| ------------------------ | ----------------- |
 | Tracks with play history | 3,182             |
 | **Match rate**           | **100%**          |
 | Track annotations        | 3,181             |
@@ -261,7 +261,7 @@ Tested on a personal library of 3,809 tracks:
 
 > Artist annotations exceed matched tracks because Navidrome propagates play history to featured/participating artists.
 
-Tested with Apple Music 1.6.2.57 (macOS) and Navidrome latest (Docker).
+Tested with Apple Music 1.6.2.57 (macOS) and Navidrome 0.60.3 (34c6f12a) on Docker.
 
 ---
 
