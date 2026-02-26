@@ -54,7 +54,8 @@ class ITunesToNavidromeMigrator:
         
         self.itunes_playlists = []
         self.track_id_map = {}
-        
+        self.itunes_album_ratings = {}
+
         self.stats = {
             'itunes_total': 0,
             'itunes_with_stats': 0,
@@ -68,6 +69,7 @@ class ITunesToNavidromeMigrator:
             'playlists_tracks_migrated': 0,
             'date_added_updated': 0,
             'album_annotations': 0,
+            'album_ratings_applied': 0,
             'artist_annotations': 0,
         }
     
@@ -133,7 +135,9 @@ class ITunesToNavidromeMigrator:
         
         if self.migrate_playlists:
             self._parse_playlists(plist)
-        
+
+        self._parse_album_ratings(tracks)
+
         return itunes_data
     
     def _parse_playlists(self, plist):
@@ -172,6 +176,38 @@ class ITunesToNavidromeMigrator:
         self.stats['playlists_total'] = len(self.itunes_playlists)
         print(f"Found {len(self.itunes_playlists)} user playlists to migrate")
     
+    def _parse_album_ratings(self, tracks):
+        """
+        Collect explicit (user-set) album ratings from the iTunes library.
+
+        iTunes stores album ratings per track. When the user sets an album
+        rating directly it is marked as non-computed. We take the most common
+        non-computed rating per (album, album_artist) pair and store it for
+        use during album annotation creation.
+        """
+        from collections import Counter
+
+        album_rating_votes = {}
+
+        for track in tracks.values():
+            album_rating = track.get('Album Rating', 0)
+            computed = track.get('Album Rating Computed', False)
+            if not album_rating or computed:
+                continue
+
+            key = (
+                self._normalize_field(track.get('Album', '')),
+                self._normalize_field(track.get('Album Artist', track.get('Artist', ''))),
+            )
+            if key not in album_rating_votes:
+                album_rating_votes[key] = Counter()
+            album_rating_votes[key][album_rating] += 1
+
+        for key, counter in album_rating_votes.items():
+            self.itunes_album_ratings[key] = counter.most_common(1)[0][0]
+
+        print(f"Found {len(self.itunes_album_ratings)} albums with explicit iTunes ratings")
+
     def _detect_music_prefix(self, tracks):
         prefixes = {}
         
@@ -417,9 +453,11 @@ class ITunesToNavidromeMigrator:
     def _create_album_annotations(self, cursor):
         """Create album-level annotations from aggregated track stats."""
         print("\nCreating album annotations...")
-        
+
         cursor.execute("""
-            SELECT mf.album_id, 
+            SELECT mf.album_id,
+                   MAX(mf.album) as album,
+                   MAX(mf.album_artist) as album_artist,
                    SUM(a.play_count) as total_plays,
                    MAX(a.play_date) as last_play,
                    AVG(a.rating) as avg_rating,
@@ -429,11 +467,18 @@ class ITunesToNavidromeMigrator:
             WHERE a.user_id = ?
             GROUP BY mf.album_id
         """, (self.user_id,))
-        
+
         albums = cursor.fetchall()
-        
-        for album_id, total_plays, last_play, avg_rating, any_starred in albums:
-            album_rating = round(avg_rating) if avg_rating else 0
+
+        for album_id, album, album_artist, total_plays, last_play, avg_rating, any_starred in albums:
+            # Use explicit iTunes album rating if available, otherwise aggregate from tracks
+            itunes_key = (self._normalize_field(album), self._normalize_field(album_artist))
+            if itunes_key in self.itunes_album_ratings:
+                album_rating = self.convert_rating(self.itunes_album_ratings[itunes_key])
+                self.stats['album_ratings_applied'] += 1
+                self.log(f"Using explicit iTunes album rating for: {album}")
+            else:
+                album_rating = round(avg_rating) if avg_rating else 0
             starred = bool(any_starred or total_plays > 0)
             
             cursor.execute(
@@ -642,6 +687,8 @@ class ITunesToNavidromeMigrator:
         
         if self.stats.get('album_annotations'):
             print(f"Album annotations created:    {self.stats['album_annotations']}")
+        if self.stats.get('album_ratings_applied'):
+            print(f"Explicit album ratings used:  {self.stats['album_ratings_applied']}")
         
         if self.stats.get('artist_annotations'):
             print(f"Artist annotations created:  {self.stats['artist_annotations']}")
