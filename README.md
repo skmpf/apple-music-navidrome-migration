@@ -1,6 +1,8 @@
 # iTunes / Apple Music → Navidrome Migration Tool
 
-Transfers listening history from iTunes/Apple Music to Navidrome.
+Switching from iTunes or the Apple Music app to Navidrome means losing years of listening history. This tool migrates your play counts, ratings, last played dates, date added, and playlists directly into Navidrome's database — so your library feels like yours from day one.
+
+Also includes a companion script to fix split albums caused by inconsistent audio file tags, which is a common issue after switching music servers.
 
 ---
 
