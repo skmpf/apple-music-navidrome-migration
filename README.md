@@ -20,20 +20,23 @@ When you switch from iTunes/Apple Music app to Navidrome, you lose years of list
 
 This tool was tested on a personal music library:
 
-| Metric                   | Result   |
-| ------------------------ | -------- |
-| Total tracks in library  | 3,809    |
-| Tracks with play history | 3,184    |
-| **Match rate**           | **100%** |
-| Album annotations        | 981      |
-| Artist annotations       | 1,235    |
-| Playlists migrated       | 17       |
-| Playlist tracks migrated | 3,265    |
+| Metric                   | Result    |
+| ------------------------ | --------- |
+| Total tracks in library  | 3,809     |
+| Tracks with play history | 3,182     |
+| **Match rate**           | **99.8%** |
+| Track annotations        | 3,176     |
+| Album annotations        | 947       |
+| Artist annotations       | 1,260     |
+| Playlists migrated       | 17        |
+| Playlist tracks migrated | 3,264     |
+
+> Artist annotations are higher than tracks migrated because Navidrome's newer versions propagate play history to featured/participating artists (e.g. "feat. Artist") in addition to primary artists.
 
 **Tested with:**
 
 - Apple Music app version 1.6.2.57 (macOS)
-- Navidrome version 0.60.3 (34c6f12a)
+- Navidrome latest (Docker)
 
 ---
 
@@ -114,8 +117,8 @@ python3 migrate.py -l Library.xml -d navidrome.db -u YOUR_USER_ID
 ### Step 5: Restore the Database
 
 1. Copy the modified `navidrome.db` back to your Navidrome data folder
-2. Start Navidrome
-3. Your listening history is restored! 🎉
+2. Start Navidrome and perform a **full library scan**
+3. Your listening history is restored!
 
 ---
 
@@ -164,6 +167,81 @@ This ensures Navidrome's album-centric UI shows your listening history correctly
 
 ---
 
+## Fixing Split Albums
+
+After migrating and scanning your library, you may find that some albums appear multiple times in Navidrome with different subsets of their tracks. This is caused by inconsistent audio file tags — not by the migration itself.
+
+### Why Albums Split
+
+Navidrome groups tracks into albums using a combination of tags. If any of these differ across tracks on the same album, Navidrome treats them as separate albums:
+
+- **Inconsistent `release_date`** — the most common cause. Some tracks have a release year tagged, others don't. Compilations often have each track tagged with the original song year instead of the compilation release year.
+- **Different MusicBrainz album IDs** — some tracks have a MusicBrainz ID tagged, others don't, or they reference different editions of the same album.
+- **Inconsistent album name or album artist** — typos, capitalisation differences, or extra spaces.
+
+### The Fix Script
+
+`fix_splits.py` automatically identifies and corrects these issues by updating the audio file tags directly.
+
+**Supported formats:** MP3, M4A/AAC, FLAC, OGG
+
+> **⚠️ WARNING — THIS SCRIPT MODIFIES YOUR AUDIO FILES DIRECTLY.**
+>
+> Unlike `migrate.py` which only modifies the Navidrome database, `fix_splits.py` writes new tag data into your actual music files. This is an irreversible operation on the files themselves.
+>
+> **Back up your entire music library before running this script.** The author is not responsible for any data loss, file corruption, or any other damage resulting from the use of this script. Use entirely at your own risk.
+
+#### Requirements
+
+```bash
+pip install mutagen
+```
+
+#### Usage
+
+```bash
+# Always do a dry run first — no files are modified
+python3 fix_splits.py -d navidrome.db -m /path/to/music
+
+# Apply changes once you are satisfied with the dry run output
+python3 fix_splits.py -d navidrome.db -m /path/to/music --apply
+
+# Also fix splits caused by partial MusicBrainz ID tagging
+python3 fix_splits.py -d navidrome.db -m /path/to/music --apply --fix-mbz
+```
+
+The `-m` / `--music-dir` argument must point to the root of your music folder — the same path that Navidrome scans (file paths in the Navidrome database are relative to this directory).
+
+#### What the script does
+
+For each split album it identifies the cause and applies the least invasive fix:
+
+| Cause                                                                     | Fix                                                                                            |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Some tracks missing `release_date`, others have it                        | Fill in the missing date using the value from the tracks that have it                          |
+| All tracks have different `release_date` values (no consensus)            | Clear all dates so Navidrome groups them by name alone                                         |
+| One MusicBrainz ID present on some tracks, absent on others (`--fix-mbz`) | Strip the MusicBrainz ID from the tagged tracks so all tracks fall back to name-based grouping |
+| Two genuinely different MusicBrainz IDs                                   | Flagged for manual review — may represent different editions                                   |
+
+After applying, trigger a **full rescan** in Navidrome.
+
+> **Note on MP3 files:** Navidrome uses the `TDRL` (Release Date) ID3 tag for album grouping, not `TDRC` (Recording Date). The script writes the correct tag. If you use another tool to fix MP3 dates, make sure it writes `TDRL`.
+
+#### Real-world results
+
+Run on the same library as the migration above:
+
+| Metric                                         | Result |
+| ---------------------------------------------- | ------ |
+| Split albums found                             | 26     |
+| Caused by inconsistent `release_date`          | 19     |
+| Caused by partial MusicBrainz ID tagging       | 6      |
+| Flagged for manual review (different editions) | 1      |
+| Audio files modified                           | ~230   |
+| Split albums remaining after fix + rescan      | 0      |
+
+---
+
 ## Troubleshooting
 
 ### Some tracks weren't matched
@@ -196,10 +274,7 @@ Make sure **Navidrome is completely stopped**.
 
 ### Split albums in Navidrome
 
-Some albums may appear multiple times if tracks have slightly different metadata (e.g., different album artist). This is a Navidrome metadata issue, not a migration issue. To fix:
-
-1. Ensure all tracks in an album have identical album name and album artist
-2. Rescan Navidrome
+See the [Fixing Split Albums](#fixing-split-albums) section above.
 
 ---
 
@@ -208,7 +283,7 @@ Some albums may appear multiple times if tracks have slightly different metadata
 1. **Keep folder structure** - Same relative locations in iTunes and Navidrome
 2. **Don't reorganize first** - Rename/move files _after_ migration
 3. **Backup first** - Always test on a copy of your database
-4. **Full scan first** - Make sure Navidrome has scanned all files
+4. **Full scan first** - Make sure Navidrome has scanned all files before migrating
 
 ---
 
@@ -218,10 +293,12 @@ Some albums may appear multiple times if tracks have slightly different metadata
 
 **USE AT YOUR OWN RISK.**
 
-- Always backup your Navidrome database before running
-- This tool modifies your database directly
-- The author is not responsible for any data loss or damage
-- Test on a copy before using on production data
+- Always backup your Navidrome database before running `migrate.py`
+- Always backup your entire music library before running `fix_splits.py`
+- `migrate.py` modifies your Navidrome database directly
+- `fix_splits.py` modifies your audio files directly — this cannot be undone
+- The author is not responsible for any data loss, file corruption, or damage of any kind
+- Test on copies before using on production data
 - Results may vary based on library structure and software versions
 
 ---
