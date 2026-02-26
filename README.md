@@ -6,6 +6,16 @@ Also includes a companion script to fix split albums caused by inconsistent audi
 
 ---
 
+## Install
+
+```bash
+git clone https://github.com/skmpf/apple-music-navidrome-migration.git
+cd apple-music-navidrome-migration
+pip install mutagen
+```
+
+---
+
 ## Let Your AI Agent Do This For You
 
 Copy the prompt below and give it to your AI agent (Claude, ChatGPT, etc.) along with access to your files. It will run the full migration and fix split albums for you.
@@ -105,8 +115,6 @@ Report a final summary table to me.
 
 </details>
 
----
-
 ## What Gets Migrated
 
 | Data                | Notes                                                             |
@@ -128,16 +136,6 @@ Annotations are written at track, album, and artist level so Navidrome's "Most P
 - Python 3.6+
 - `iTunes Library.xml` — export from Apple Music via **File → Library → Export Library...**
 - `navidrome.db` with Navidrome **stopped**
-
-## Installation
-
-```bash
-git clone https://github.com/skmpf/apple-music-navidrome-migration.git
-cd apple-music-navidrome-migration
-pip install mutagen
-```
-
----
 
 ## migrate.py
 
@@ -202,12 +200,6 @@ Navidrome groups tracks using MusicBrainz album ID → album artist → album na
 | Inconsistent `release_date` | Most common. Some tracks have a year tagged, others don't. Compilations often tag each track with the original song year.                                                                       |
 | Different MusicBrainz IDs   | Some tracks have a MBZ ID, others don't — or they reference different editions.                                                                                                                 |
 | Inconsistent album name     | Typos, capitalisation, extra spaces, or different separator characters (`Artist - Album` vs `Artist: Album`). The script does not detect name-format differences — these need a manual tag fix. |
-
-### Requirements
-
-```bash
-pip install mutagen
-```
 
 ### Workflow
 
