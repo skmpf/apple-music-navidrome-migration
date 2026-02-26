@@ -4,6 +4,107 @@ Transfers listening history from iTunes/Apple Music to Navidrome.
 
 ---
 
+## Let Your AI Agent Do This For You
+
+Copy the prompt below and give it to your AI agent (Claude, ChatGPT, etc.) along with access to your files. It will run the full migration and fix split albums for you.
+
+> ⚠️ **Warning — read before proceeding.**
+> `migrate.py` modifies your Navidrome database. `fix_splits.py` modifies your audio files directly and **cannot be undone**. Always back up your Navidrome database and your entire music library before starting. The author of this project accepts no responsibility for data loss, file corruption, or any other damage of any kind. This software is provided as-is, without warranty of any kind. You proceed entirely at your own risk.
+
+<details>
+<summary><strong>▶ Click to expand — copy this prompt to your AI agent</strong></summary>
+
+```
+I want you to migrate my iTunes/Apple Music listening history to Navidrome
+using the scripts in this repository. Follow these steps exactly.
+
+BEFORE YOU START — confirm with me:
+  1. The path to my iTunes Library.xml export
+  2. The path to my navidrome.db file (Navidrome must be stopped)
+  3. The path to my music root directory (the folder Navidrome scans)
+  4. That I have backed up both navidrome.db and my music library
+
+---
+
+STEP 1 — Run the migration
+
+  python3 migrate.py -l <Library.xml> -d <navidrome.db>
+
+The user is auto-detected. If there are multiple users, list them with
+--list-users and rerun with -u <USER_ID>.
+
+After running, report the summary: matched tracks, unmatched tracks,
+annotations created, playlists migrated.
+
+---
+
+STEP 2 — Handle unmatched tracks
+
+Run with --show-unmatched and investigate each one:
+  - Tracks showing [Unknown Album] or [Unknown Artist] in Navidrome have
+    missing file tags — fix them with mutagen, then ask me to rescan and
+    rerun the migration.
+  - Tracks whose album name changed due to a later split fix — patch their
+    annotations directly into the DB using the known media_file_id.
+  - Tracks whose files are genuinely missing from Navidrome — report them
+    to me and skip.
+
+---
+
+STEP 3 — Fix split albums (requires pip install mutagen)
+
+Ask me to start Navidrome and run a full library scan, then stop it again.
+
+Run multiple passes until the dry run reports 0 split albums:
+
+  Pass 1:
+    python3 fix_splits.py -d <navidrome.db> -m <music_root>           # dry run
+    python3 fix_splits.py -d <navidrome.db> -m <music_root> --apply --fix-mbz
+
+  Ask me to rescan Navidrome, then:
+
+  Pass 2+:
+    python3 fix_splits.py -d <navidrome.db> -m <music_root>           # dry run
+    python3 fix_splits.py -d <navidrome.db> -m <music_root> --apply --fix-mbz
+
+  Repeat until dry run shows 0 splits.
+
+For albums flagged as mbz_multi (two different MusicBrainz IDs): strip
+the MBZ tag from all tracks in the album using mutagen so they fall back
+to name-based grouping.
+
+For splits caused by album name format differences (not detected
+automatically — e.g. "Artist - Album" vs "Artist: Album"): identify the
+divergent tracks in the DB, fix the album name tag with mutagen to match
+the majority, then rescan.
+
+---
+
+STEP 4 — Re-run migration after tag fixes
+
+If any file tags were corrected in Steps 2–3, rerun the migration to
+update album and artist annotations:
+
+  python3 migrate.py -l <Library.xml> -d <navidrome.db>
+
+---
+
+STEP 5 — Verify
+
+Query the database and confirm:
+  - Track annotations count and total play count
+  - Album annotations count
+  - Artist annotations count
+  - Playlist count and total tracks
+  - 0 remaining split albums
+
+Report a final summary table to me.
+```
+
+</details>
+
+---
+
 ## What Gets Migrated
 
 | Data                | Notes                                                             |
