@@ -139,12 +139,12 @@ Tested on a personal library of 3,809 tracks:
 
 | Metric                   | Result    |
 | ------------------------ | --------- |
-| Tracks with play history | 3,182     |
-| **Match rate**           | **99.8%** |
-| Track annotations        | 3,176     |
-| Album annotations        | 946       |
-| Artist annotations       | 1,260     |
-| Playlists migrated       | 17 (3,264 tracks) |
+| Tracks with play history | 3,182             |
+| **Match rate**           | **100%**          |
+| Track annotations        | 3,181             |
+| Album annotations        | 948               |
+| Artist annotations       | 1,261             |
+| Playlists migrated       | 17 (3,265 tracks) |
 
 **fix_splits.py**
 
