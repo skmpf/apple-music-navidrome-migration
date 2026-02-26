@@ -632,15 +632,24 @@ class ITunesToNavidromeMigrator:
         for playlist in self.itunes_playlists:
             name = playlist['name']
             track_ids = playlist['track_ids']
-            
-            playlist_id = str(uuid.uuid4())
-            
+
+            # Reuse existing playlist row if present; create one only if absent
             cursor.execute(
-                """INSERT INTO playlist (id, name, owner_id, created_at, updated_at, public)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (playlist_id, name, self.user_id, datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                 datetime.now().strftime('%Y-%m-%d %H:%M:%S'), False)
+                "SELECT id FROM playlist WHERE name = ? AND owner_id = ?",
+                (name, self.user_id)
             )
+            row = cursor.fetchone()
+            if row:
+                playlist_id = row[0]
+                cursor.execute("DELETE FROM playlist_tracks WHERE playlist_id = ?", (playlist_id,))
+            else:
+                playlist_id = str(uuid.uuid4())
+                cursor.execute(
+                    """INSERT INTO playlist (id, name, owner_id, created_at, updated_at, public)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (playlist_id, name, self.user_id, datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                     datetime.now().strftime('%Y-%m-%d %H:%M:%S'), False)
+                )
             
             position = 0
             tracks_added = 0

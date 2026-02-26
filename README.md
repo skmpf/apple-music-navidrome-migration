@@ -42,15 +42,16 @@ This tool was tested on a personal music library:
 
 ## What Gets Migrated
 
-| Data               | Migrated? | Notes                                             |
-| ------------------ | --------- | ------------------------------------------------- |
-| Play counts        | ✅ Yes    |                                                   |
-| Star ratings (1-5) | ✅ Yes    | Apple Music app 0-100 scale → Navidrome 1-5 stars |
-| Last played date   | ✅ Yes    |                                                   |
-| Date added         | ✅ Yes    | When you added tracks to your library             |
-| Playlists          | ✅ Yes    | Regular playlists only                            |
-| Skip counts        | ❌ No     | Navidrome doesn't support this                    |
-| Smart playlists    | ❌ No     | Need to recreate in Navidrome                     |
+| Data               | Migrated? | Notes                                                                   |
+| ------------------ | --------- | ----------------------------------------------------------------------- |
+| Play counts        | ✅ Yes    |                                                                         |
+| Star ratings (1-5) | ✅ Yes    | Apple Music app 0-100 scale → Navidrome 1-5 stars                       |
+| Album ratings      | ✅ Yes    | Explicit user-set album ratings; falls back to average of track ratings |
+| Last played date   | ✅ Yes    |                                                                         |
+| Date added         | ✅ Yes    | When you added tracks to your library                                   |
+| Playlists          | ✅ Yes    | Regular playlists only                                                  |
+| Skip counts        | ❌ No     | Navidrome doesn't support this                                          |
+| Smart playlists    | ❌ No     | Need to recreate in Navidrome                                           |
 
 ---
 
@@ -284,6 +285,7 @@ See the [Fixing Split Albums](#fixing-split-albums) section above.
 2. **Don't reorganize first** - Rename/move files _after_ migration
 3. **Backup first** - Always test on a copy of your database
 4. **Full scan first** - Make sure Navidrome has scanned all files before migrating
+5. **Safe to re-run** - The script is idempotent. Re-running updates existing annotations and refreshes playlist tracks rather than creating duplicates.
 
 ---
 
