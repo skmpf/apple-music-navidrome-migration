@@ -129,6 +129,14 @@ Annotations are written at track, album, and artist level so Navidrome's "Most P
 - `iTunes Library.xml` — export from Apple Music via **File → Library → Export Library...**
 - `navidrome.db` with Navidrome **stopped**
 
+## Installation
+
+```bash
+git clone https://github.com/skmpf/apple-music-navidrome-migration.git
+cd apple-music-navidrome-migration
+pip install mutagen
+```
+
 ---
 
 ## migrate.py
